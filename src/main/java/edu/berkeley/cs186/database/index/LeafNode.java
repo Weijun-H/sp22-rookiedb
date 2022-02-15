@@ -383,17 +383,14 @@ class LeafNode extends BPlusNode {
 
         List<DataBox> keys = new ArrayList<>();
         List<RecordId> rids = new ArrayList<>();
-        int n = buf.getInt();
-        int isLeafSize = buf.get(1);
+        int isLeafSize = buf.get();
         Optional<Long> rightSibling = Optional.of(buf.getLong());
-        for (int i = 0; i < n; ++i) {
+        int keySize = buf.getInt();
+        for (int i = 0; i < keySize; ++i) {
             keys.add(DataBox.fromBytes(buf, metadata.getKeySchema()));
             rids.add(RecordId.fromBytes(buf));
-
         }
-        for (int i = 0; i < n + 1; ++i) {
 
-        }
         return new LeafNode( metadata,  bufferManager,  page, keys, rids, rightSibling,  treeContext);
 
     }
