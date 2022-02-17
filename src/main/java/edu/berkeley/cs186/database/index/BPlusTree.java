@@ -83,7 +83,7 @@ public class BPlusTree {
      *   - the partition number of the tree,
      *   - the page number of the root of the tree.
      *
-     * All pages allocated on the given partition are serializations of inner and leaf nodes.
+     * All pages allocated on the given partition are serializations of inneriand leaf nodes.
      */
     public BPlusTree(BufferManager bufferManager, BPlusTreeMetadata metadata, LockContext lockContext) {
         // Prevent child locks - we only lock the entire tree as a whole.
@@ -146,8 +146,7 @@ public class BPlusTree {
         LockUtil.ensureSufficientLockHeld(lockContext, LockType.NL);
 
         // TODO(proj2): implement
-
-        return Optional.empty();
+        return root.get(key).getKey(key);
     }
 
     /**

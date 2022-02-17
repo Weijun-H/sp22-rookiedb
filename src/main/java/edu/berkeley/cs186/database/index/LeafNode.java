@@ -147,8 +147,8 @@ class LeafNode extends BPlusNode {
     @Override
     public LeafNode get(DataBox key) {
         // TODO(proj2): implement
-
-        return null;
+//        this.sync();
+        return this;
     }
 
     // See BPlusNode.getLeftmostLeaf.
@@ -385,8 +385,8 @@ class LeafNode extends BPlusNode {
         List<RecordId> rids = new ArrayList<>();
         int isLeafSize = buf.get();
         Optional<Long> rightSibling = Optional.of(buf.getLong());
-        int keySize = buf.getInt();
-        for (int i = 0; i < keySize; ++i) {
+        Optional<Integer> keySize = Optional.of(buf.getInt());
+        for (int i = 0; i < keySize.orElse(-1); ++i) {
             keys.add(DataBox.fromBytes(buf, metadata.getKeySchema()));
             rids.add(RecordId.fromBytes(buf));
         }
