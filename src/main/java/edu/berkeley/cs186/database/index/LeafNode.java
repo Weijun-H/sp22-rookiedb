@@ -147,7 +147,6 @@ class LeafNode extends BPlusNode {
     @Override
     public LeafNode get(DataBox key) {
         // TODO(proj2): implement
-//        this.sync();
         return this;
     }
 
@@ -155,7 +154,6 @@ class LeafNode extends BPlusNode {
     @Override
     public LeafNode getLeftmostLeaf() {
         // TODO(proj2): implement
-
         return this;
     }
 
@@ -163,8 +161,32 @@ class LeafNode extends BPlusNode {
     @Override
     public Optional<Pair<DataBox, Long>> put(DataBox key, RecordId rid) {
         // TODO(proj2): implement
+        if (keys.contains(key)) {
+            throw new BPlusTreeException("insert duplicate entries with the same key");
+        }
 
-        return Optional.empty();
+        // insert (key, rid)
+        int index = InnerNode.numLessThanEqual(key, keys);
+        keys.add(index, key);
+        rids.add(index, rid);
+
+        if (keys.size() <= metadata.getOrder() * 2) {
+            sync();
+            return Optional.empty();
+        } else {
+            List<DataBox> right_keys = keys.subList(metadata.getOrder(), keys.size());
+            List<RecordId> right_rids = rids.subList(metadata.getOrder(), keys.size());
+
+            keys = keys.subList(0, metadata.getOrder());
+            rids = rids.subList(0, metadata.getOrder());
+
+            LeafNode new_rightSibling = new LeafNode(metadata, bufferManager, right_keys,
+                                                     right_rids, rightSibling, treeContext);
+
+            rightSibling = Optional.of(new_rightSibling.getPage().getPageNum());
+            sync();
+            return Optional.of(new Pair(right_keys.get(0), new_rightSibling.getPage().getPageNum()));
+        }
     }
 
     // See BPlusNode.bulkLoad.

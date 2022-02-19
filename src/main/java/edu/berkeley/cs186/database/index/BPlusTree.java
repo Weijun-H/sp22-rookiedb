@@ -239,6 +239,27 @@ public class BPlusTree {
     }
 
     /**
+     * split the root with the new root has key
+     * this helper function is used by put and buldLoad
+     *                 newRoot
+     *                /       \
+     *               /         \
+     *        originalRoot    child
+     *
+     * @param key : the key in the new root
+     * @param child : the right child of the newRoot
+     */
+    private void splitRoot(DataBox key, Long child) {
+        List<DataBox> keys = new ArrayList<>();
+        keys.add(key); // insert split_key into the new root
+        List<Long> children = new ArrayList<>();
+        children.add(root.getPage().getPageNum()); // left child : original root
+        children.add(child);
+        BPlusNode newRoot = new InnerNode(metadata, bufferManager, keys, children, lockContext);
+        updateRoot(newRoot);
+    }
+
+    /**
      * Inserts a (key, rid) pair into a B+ tree. If the key already exists in
      * the B+ tree, then the pair is not inserted and an exception is raised.
      *
@@ -256,7 +277,10 @@ public class BPlusTree {
         // Note: You should NOT update the root variable directly.
         // Use the provided updateRoot() helper method to change
         // the tree's root if the old root splits.
-
+        Optional<Pair<DataBox, Long>> splitInfo = root.put(key, rid);
+        if (splitInfo.isPresent()) {
+            splitRoot(splitInfo.get().getFirst(), splitInfo.get().getSecond());
+        }
         return;
     }
 

@@ -94,12 +94,45 @@ class InnerNode extends BPlusNode {
         return LeftmostChild.getLeftmostLeaf();
     }
 
+    private Optional<Pair<DataBox, Long>> insert(DataBox key, Long child) {
+        int index = InnerNode.numLessThan(key, keys);
+        keys.add(index, key);
+        children.add(index + 1, child);
+
+        if (keys.size() <= metadata.getOrder() * 2) {
+            sync();
+            return Optional.empty();
+        } else {
+            DataBox split_key = keys.get(metadata.getOrder());
+            List<DataBox> right_keys = keys.subList(metadata.getOrder() + 1, keys.size());
+            List<Long> right_children = children.subList(metadata.getOrder() + 1, keys.size());
+
+            keys = keys.subList(0, metadata.getOrder());
+            children = children.subList(0, metadata.getOrder() + 1);
+            sync();
+
+            InnerNode new_rightSibling = new InnerNode(metadata, bufferManager,
+                                                       right_keys, right_children, treeContext);
+
+            return Optional.of(new Pair(split_key, new_rightSibling.getPage().getPageNum()));
+        }
+    }
+
     // See BPlusNode.put.
     @Override
     public Optional<Pair<DataBox, Long>> put(DataBox key, RecordId rid) {
         // TODO(proj2): implement
-
-        return Optional.empty();
+        BPlusNode child = BPlusNode.fromBytes(metadata, bufferManager,
+                                              treeContext, children.get(numLessThanEqual(key, keys)));
+        Optional<Pair<DataBox, Long>> splitInfo = child.put(key, rid);
+        if (splitInfo.isPresent()) {
+            // the child split, insert the (split_key, child_node_pageNum) into this node
+            Pair<DataBox, Long> info = splitInfo.get();
+            return insert(info.getFirst(), info.getSecond());
+        } else {
+            // the child does not split
+            return splitInfo;
+        }
     }
 
     // See BPlusNode.bulkLoad.
