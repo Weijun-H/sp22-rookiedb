@@ -17,6 +17,7 @@ import edu.berkeley.cs186.database.memory.BufferManager;
 import edu.berkeley.cs186.database.memory.ClockEvictionPolicy;
 import edu.berkeley.cs186.database.recovery.DummyRecoveryManager;
 import edu.berkeley.cs186.database.table.RecordId;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -201,6 +202,7 @@ public class TestBPlusTree {
         String rr = "((8 (8 8)) (9 (9 9)))";
         l = String.format("(%s 6 %s)", ll, lr);
         r = String.format("(%s 8 %s)", rl, rr);
+
         assertEquals(String.format("(%s 7 %s)", l, r), tree.toSexp());
 
         //            (7)
