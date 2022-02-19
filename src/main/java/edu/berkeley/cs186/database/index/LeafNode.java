@@ -166,7 +166,7 @@ class LeafNode extends BPlusNode {
         }
 
         // insert (key, rid)
-        int index = InnerNode.numLessThanEqual(key, keys);
+        int index = InnerNode.numLessThan(key, keys);
         keys.add(index, key);
         rids.add(index, rid);
 
@@ -175,7 +175,7 @@ class LeafNode extends BPlusNode {
             return Optional.empty();
         } else {
             List<DataBox> right_keys = keys.subList(metadata.getOrder(), keys.size());
-            List<RecordId> right_rids = rids.subList(metadata.getOrder(), keys.size());
+            List<RecordId> right_rids = rids.subList(metadata.getOrder(), rids.size());
 
             keys = keys.subList(0, metadata.getOrder());
             rids = rids.subList(0, metadata.getOrder());
@@ -407,13 +407,16 @@ class LeafNode extends BPlusNode {
         Page page = bufferManager.fetchPage(treeContext, pageNum);
         Buffer buf = page.getBuffer();
 
+        byte nodeType = buf.get();
+        assert(nodeType == (byte) 1);
 
         List<DataBox> keys = new ArrayList<>();
         List<RecordId> rids = new ArrayList<>();
-        int isLeafSize = buf.get();
-        Optional<Long> rightSibling = Optional.of(buf.getLong());
-        Optional<Integer> keySize = Optional.of(buf.getInt());
-        for (int i = 0; i < keySize.orElse(-1); ++i) {
+        long rs = buf.getLong();
+        Optional<Long> rightSibling = rs == -1 ? Optional.empty() : Optional.of(rs);
+        int nums = buf.getInt();
+
+        for (int i = 0; i < nums; ++i) {
             keys.add(DataBox.fromBytes(buf, metadata.getKeySchema()));
             rids.add(RecordId.fromBytes(buf));
         }

@@ -10,6 +10,7 @@ import edu.berkeley.cs186.database.databox.Type;
 import edu.berkeley.cs186.database.io.DiskSpaceManager;
 import edu.berkeley.cs186.database.memory.BufferManager;
 import edu.berkeley.cs186.database.table.RecordId;
+import edu.berkeley.cs186.database.table.Record;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -201,8 +202,7 @@ public class BPlusTree {
         LockUtil.ensureSufficientLockHeld(lockContext, LockType.NL);
 
         // TODO(proj2): Return a BPlusTreeIterator.
-
-        return Collections.emptyIterator();
+        return new BPlusTreeIterator(root.getLeftmostLeaf());
     }
 
     /**
@@ -234,8 +234,8 @@ public class BPlusTree {
         LockUtil.ensureSufficientLockHeld(lockContext, LockType.NL);
 
         // TODO(proj2): Return a BPlusTreeIterator.
-
-        return Collections.emptyIterator();
+        LeafNode startNode = root.get(key);
+        return new BPlusTreeIterator(startNode, key);
     }
 
     /**
@@ -254,7 +254,7 @@ public class BPlusTree {
         keys.add(key); // insert split_key into the new root
         List<Long> children = new ArrayList<>();
         children.add(root.getPage().getPageNum()); // left child : original root
-        children.add(child);
+        children.add(child); // right child : new_split node
         BPlusNode newRoot = new InnerNode(metadata, bufferManager, keys, children, lockContext);
         updateRoot(newRoot);
     }
@@ -279,6 +279,7 @@ public class BPlusTree {
         // the tree's root if the old root splits.
         Optional<Pair<DataBox, Long>> splitInfo = root.put(key, rid);
         if (splitInfo.isPresent()) {
+            // split the root
             splitRoot(splitInfo.get().getFirst(), splitInfo.get().getSecond());
         }
         return;
@@ -444,19 +445,42 @@ public class BPlusTree {
     // Iterator ////////////////////////////////////////////////////////////////
     private class BPlusTreeIterator implements Iterator<RecordId> {
         // TODO(proj2): Add whatever fields and constructors you want here.
+        LeafNode currNode;
+        Iterator<RecordId> currIter;
+
+        BPlusTreeIterator(LeafNode node) {
+            currNode = node;
+            currIter = currNode.scanAll();
+        }
+
+        BPlusTreeIterator(LeafNode node, DataBox key) {
+            currNode = node;
+            currIter = currNode.scanGreaterEqual(key);
+        }
 
         @Override
         public boolean hasNext() {
             // TODO(proj2): implement
-
-            return false;
+            if (currIter.hasNext()) {
+                return true;
+            } else {
+                Optional<LeafNode> opt_rightSibling = currNode.getRightSibling();
+                if (opt_rightSibling.isPresent()) {
+                    currNode = opt_rightSibling.get();
+                    currIter = currNode.scanAll();
+                    return true;
+                } else {
+                    return false;
+                }
+            }
         }
 
         @Override
         public RecordId next() {
             // TODO(proj2): implement
-
-            throw new NoSuchElementException();
+            if (currIter.hasNext()) return currIter.next();
+            else {
+                throw new UnsupportedOperationException("There is no next value!");            }
         }
     }
 }

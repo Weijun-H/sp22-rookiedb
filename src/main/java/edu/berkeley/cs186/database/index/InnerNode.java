@@ -105,7 +105,7 @@ class InnerNode extends BPlusNode {
         } else {
             DataBox split_key = keys.get(metadata.getOrder());
             List<DataBox> right_keys = keys.subList(metadata.getOrder() + 1, keys.size());
-            List<Long> right_children = children.subList(metadata.getOrder() + 1, keys.size());
+            List<Long> right_children = children.subList(metadata.getOrder() + 1, children.size());
 
             keys = keys.subList(0, metadata.getOrder());
             children = children.subList(0, metadata.getOrder() + 1);
@@ -125,13 +125,13 @@ class InnerNode extends BPlusNode {
         BPlusNode child = BPlusNode.fromBytes(metadata, bufferManager,
                                               treeContext, children.get(numLessThanEqual(key, keys)));
         Optional<Pair<DataBox, Long>> splitInfo = child.put(key, rid);
-        if (splitInfo.isPresent()) {
+        if (!splitInfo.isPresent()) {
+            // the child does not split, return Optional.empty()
+            return splitInfo;
+        } else {
             // the child split, insert the (split_key, child_node_pageNum) into this node
             Pair<DataBox, Long> info = splitInfo.get();
-            return insert(info.getFirst(), info.getSecond());
-        } else {
-            // the child does not split
-            return splitInfo;
+            return this.insert(info.getFirst(), info.getSecond());
         }
     }
 
