@@ -235,6 +235,11 @@ public class GHJOperator extends JoinOperator {
 
         // TODO(proj3_part1): populate leftRecords and rightRecords such that
         // SHJ breaks when trying to join them but not GHJ
+
+        // B-1 buffers to do the partition
+        // each partition can not exceed B-2 buffers
+        // So with (B-1) * (B-2) * 8 + 1 = 161 records, SHJ will fail
+        // In fact, due to the key skew, with fewer records, SHJ may also fail
         for (int i = 0; i < 161; i++) {
             leftRecords.add(createRecord(i));
             rightRecords.add((createRecord(i)));
@@ -259,6 +264,9 @@ public class GHJOperator extends JoinOperator {
         ArrayList<Record> leftRecords = new ArrayList<>();
         ArrayList<Record> rightRecords = new ArrayList<>();
         // TODO(proj3_part1): populate leftRecords and rightRecords such that GHJ breaks
+
+        // since all the records are equal, there is only one partition after no matter how many passes
+        // So with (B-2) * 8 + 1 = 33 records, GHJ will fail
         for (int i = 0; i < 33; i++) {
             leftRecords.add(createRecord(0));
             rightRecords.add((createRecord(0)));
