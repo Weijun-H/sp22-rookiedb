@@ -87,7 +87,14 @@ public class SortOperator extends QueryOperator {
      */
     public Run sortRun(Iterator<Record> records) {
         // TODO(proj3_part1): implement
-        return null;
+        Run sortedRun = new Run(transaction, getSchema());
+        List<Record> list_records = new ArrayList<>();
+        while (records.hasNext()) {
+            list_records.add(records.next());
+        }
+        Collections.sort(list_records, new RecordComparator());
+        sortedRun.addAll(list_records);
+        return sortedRun;
     }
 
     /**
@@ -108,6 +115,28 @@ public class SortOperator extends QueryOperator {
     public Run mergeSortedRuns(List<Run> runs) {
         assert (runs.size() <= this.numBuffers - 1);
         // TODO(proj3_part1): implement
+        Run sortedRun = new Run(transaction, getSchema());
+        List<BacktrackingIterator<Record>> iters = new ArrayList<>();
+        for (Run run: runs) {
+            iters.add(run.iterator());
+        }
+        PriorityQueue<Pair<Record, Integer>> q = new PriorityQueue<>(new RecordPairComparator());
+        for (int i = 0; i < iters.size(); i++) {
+            if (iters.get(i).hasNext()) {
+                q.add(new Pair<>(iters.get(i).next(), i));
+            }
+        }
+        while (!q.isEmpty()) {
+            Pair<Record, Integer> p = q.poll();
+            Record r = p.getFirst();
+            int i = p.getSecond();
+            sortedRun.add(r);
+            if (iters.get(i).hasNext()) {
+                q.add(new Pair<>(iters.get(i).next(), i));
+            } else {
+                continue;
+            }
+        }
         return null;
     }
 
