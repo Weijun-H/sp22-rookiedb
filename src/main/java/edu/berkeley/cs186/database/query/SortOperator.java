@@ -133,8 +133,6 @@ public class SortOperator extends QueryOperator {
             sortedRun.add(r);
             if (iters.get(i).hasNext()) {
                 q.add(new Pair<>(iters.get(i).next(), i));
-            } else {
-                continue;
             }
         }
         return sortedRun;
