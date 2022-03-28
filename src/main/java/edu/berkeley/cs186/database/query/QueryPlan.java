@@ -738,7 +738,32 @@ public class QueryPlan {
         // Set the final operator to the lowest cost operator from the last
         // pass, add group by, project, sort and limit operators, and return an
         // iterator over the final operator.
-        return this.executeNaive(); // TODO(proj3_part2): Replace this!
+
+        int passNumber = this.tableNames.size();
+        // pass 1
+        Map<Set<String>, QueryOperator> pass1Map = new HashMap<>();
+        for (String table : this.tableNames) {
+            Set<String> singleTableSet = new HashSet<>();
+            singleTableSet.add(table);
+            pass1Map.put(singleTableSet, minCostSingleAccess(table));
+        }
+
+        // pass i
+        Map<Set<String>, QueryOperator> preMap = pass1Map;
+        for (int i = 2; i <= passNumber; i++) {
+            preMap = minCostJoins(preMap, pass1Map);
+        }
+
+        // set final operator
+        this.finalOperator = minCostOperator(preMap);
+
+        // add group by, project, sort and limit operators
+        addGroupBy();
+        addProject();
+        addLimit();
+
+        return this.finalOperator.iterator();
+//        return this.executeNaive(); // TODO(proj3_part2): Replace this!
     }
 
     // EXECUTE NAIVE ///////////////////////////////////////////////////////////
