@@ -202,6 +202,7 @@ public class LockContext {
     public LockType getEffectiveLockType(TransactionContext transaction) {
         if (transaction == null) return LockType.NL;
         // TODO(proj4_part2): implement
+
         return LockType.NL;
     }
 
@@ -213,6 +214,10 @@ public class LockContext {
      */
     private boolean hasSIXAncestor(TransactionContext transaction) {
         // TODO(proj4_part2): implement
+        for (Lock lock : parent.lockman.getLocks(transaction)) {
+            if (lock.lockType == LockType.SIX)
+                return true;
+        }
         return false;
     }
 
@@ -225,7 +230,15 @@ public class LockContext {
      */
     private List<ResourceName> sisDescendants(TransactionContext transaction) {
         // TODO(proj4_part2): implement
-        return new ArrayList<>();
+        List<ResourceName> resources = new ArrayList<>();
+        for (LockContext childcontext : children.values()) {
+            for (Lock lock : childcontext.lockman.getLocks(transaction)) {
+                if (lock.lockType == LockType.S || lock.lockType == LockType.IS) {
+                    resources.add(lock.name);
+                }
+            }
+        }
+        return resources;
     }
 
     /**
