@@ -139,7 +139,18 @@ public class LockContext {
     public void release(TransactionContext transaction)
             throws NoLockHeldException, InvalidLockException {
         // TODO(proj4_part2): implement
+        if (readonly) {
+            throw new UnsupportedOperationException("the context is readonly");
+        }
 
+        if (getNumChildren(transaction) > 0 && parent == null) {
+            throw new InvalidLockException("the release request is invalid");
+        }
+        lockman.release(transaction, getResourceName());
+        LockContext parentCTX = parentContext();
+        if (parentCTX != null) {
+            parentCTX.updateChildLockNum(transaction.getTransNum(), -1);
+        }
         return;
     }
 
