@@ -1,6 +1,7 @@
 package edu.berkeley.cs186.database.concurrency;
 
 import edu.berkeley.cs186.database.TransactionContext;
+import jdk.internal.loader.Resource;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -214,9 +215,12 @@ public class LockContext {
      */
     private boolean hasSIXAncestor(TransactionContext transaction) {
         // TODO(proj4_part2): implement
-        for (Lock lock : parent.lockman.getLocks(transaction)) {
-            if (lock.lockType == LockType.SIX)
+        LockContext ancestorCTX = parentContext();
+        while (ancestorCTX != null) {
+            if (lockman.getLockType(transaction, ancestorCTX.getResourceName()) == LockType.SIX) {
                 return true;
+            }
+            ancestorCTX = ancestorCTX.parentContext();
         }
         return false;
     }
@@ -231,12 +235,10 @@ public class LockContext {
     private List<ResourceName> sisDescendants(TransactionContext transaction) {
         // TODO(proj4_part2): implement
         List<ResourceName> resources = new ArrayList<>();
-        for (LockContext childcontext : children.values()) {
-            for (Lock lock : childcontext.lockman.getLocks(transaction)) {
-                if (lock.lockType == LockType.S || lock.lockType == LockType.IS) {
-                    resources.add(lock.name);
-                }
-            }
+        List<Lock> locks = lockman.getLocks(transaction);
+        for (Lock lock : locks) {
+            if (lock.name.isDescendantOf(name) && (lock.lockType == LockType.S || lock.lockType == LockType.IS))
+                resources.add(lock.name);
         }
         return resources;
     }
