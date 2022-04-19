@@ -74,10 +74,10 @@ public class LockManager {
         public void grantOrUpdateLock(Lock lock) {
             // TODO(proj4_part1): implement
             long transNum = lock.transactionNum;
-            for (Lock pre : locks) {
-                if (pre.transactionNum == lock.transactionNum) {
-                    pre.lockType = lock.lockType;
-                    updateLockTrans(pre);
+            for (Lock currLock : locks) {
+                if (currLock.transactionNum.equals(lock.transactionNum)) {
+                    currLock.lockType = lock.lockType;
+                    updateLockTrans(currLock);
                     return;
                 }
             }
@@ -135,6 +135,7 @@ public class LockManager {
                     // unlock the transaction
                     request.transaction.unblock();
                 } else {
+                    // cannot release lock because of the conflict
                     break;
                 }
             }
