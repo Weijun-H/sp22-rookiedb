@@ -98,6 +98,19 @@ public class LockContext {
     }
 
     /**
+     * Update the number of the childLocks of the contexts in **names**
+     * this function updates all of its ascendants recursively
+     */
+    private void updateChildLockNum(long transNum, int delta, List<ResourceName> names) {
+        for (ResourceName name : names) {
+            LockContext lc = fromResourceName(lockman, name).parentContext();
+            if (lc != null) {
+                lc.updateChildLockNum(transNum,delta);
+            }
+        }
+    }
+
+    /**
      * Acquire a `lockType` lock, for transaction `transaction`.
      *
      * Note: you must make any necessary updates to numChildLocks, or else calls
@@ -176,7 +189,32 @@ public class LockContext {
     public void promote(TransactionContext transaction, LockType newLockType)
             throws DuplicateLockRequestException, NoLockHeldException, InvalidLockException {
         // TODO(proj4_part2): implement
+        if (readonly) {
+            throw new UnsupportedOperationException("the context is readonly");
+        }
+        if (parent != null && !LockType.canBeParentLock(parent.getEffectiveLockType(transaction), newLockType)) {
+            throw new InvalidLockException("the lock request is invalid");
+        }
 
+        if (newLockType == LockType.SIX) {
+            if (hasSIXAncestor(transaction)) {
+                throw new InvalidLockException("ancestor already has SIX lock, redundant lock request");
+            }
+            if (lockman.getLocks(transaction).size() == 0) {
+                throw new NoLockHeldException("transaction has no lock");
+            }
+            if (!LockType.substitutable(newLockType, lockman.getLockType(transaction, getResourceName()))) {
+                throw new InvalidLockException("new LockType can not substitute the old one");
+            }
+            List<ResourceName> sisDesc = sisDescendants(transaction);
+            // Update numChildLocks
+            updateChildLockNum(transaction.getTransNum(), -1, sisDesc);
+            // release the locks simultaneously (including the lock in this level)
+            sisDesc.add(name);
+            lockman.acquireAndRelease(transaction, name, newLockType, sisDesc);
+        } else {
+            lockman.promote(transaction, name, newLockType);
+        }
         return;
     }
 
