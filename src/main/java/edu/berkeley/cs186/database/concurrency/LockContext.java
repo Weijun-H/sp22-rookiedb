@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static edu.berkeley.cs186.database.concurrency.LockType.NL;
+
 /**
  * LockContext wraps around LockManager to provide the hierarchical structure
  * of multigranularity locking. Calls to acquire/release/etc. locks should
@@ -219,6 +221,21 @@ public class LockContext {
     }
 
     /**
+     * Helper method to get a list of resourceNames of all locks that are S or IS
+     * and are descendants of current context for the given transaction.
+     */
+    private List<ResourceName> getDescendants(TransactionContext transaction) {
+        List<ResourceName> names = new ArrayList<>();
+        List<Lock> locks = lockman.getLocks(transaction);
+        for (Lock lock : locks) {
+            if (lock.name.isDescendantOf(name)) {
+                names.add(lock.name);
+            }
+        }
+        return names;
+    }
+
+    /**
      * Escalate `transaction`'s lock from descendants of this context to this
      * level, using either an S or X lock. There should be no descendant locks
      * after this call, and every operation valid on descendants of this context
@@ -253,7 +270,44 @@ public class LockContext {
      */
     public void escalate(TransactionContext transaction) throws NoLockHeldException {
         // TODO(proj4_part2): implement
+        if (readonly) {
+            throw new UnsupportedOperationException("context is readonly");
+        }
+        LockType thisLevelLock = lockman.getLockType(transaction, name);
+        if (thisLevelLock == NL) {
+            throw new NoLockHeldException("transaction has no lock at this level");
+        }
 
+        List<ResourceName> descendants = getDescendants(transaction);
+        boolean toX = (thisLevelLock == LockType.IX
+                    || thisLevelLock == LockType.SIX
+                    || thisLevelLock == LockType.X);
+        if (!toX) {
+            for (ResourceName desc : descendants) {
+                LockType lt = lockman.getLockType(transaction, desc);
+                if (lt != LockType.S && lt != LockType.IS) {
+                    toX = true;
+                    break;
+                }
+            }
+        }
+
+        // only make mutating calls for necessary
+        if (descendants.isEmpty() && !thisLevelLock.isIntent())
+            return;
+
+        // update childLockNum
+        if (!descendants.isEmpty()) {
+            updateChildLockNum(transaction.getTransNum(), -1, descendants);
+        }
+
+        // acquire & release simultaneously (also need to release thisLevelLock)
+        descendants.add(name);
+        if (toX) {
+            lockman.acquireAndRelease(transaction, name, LockType.X, descendants);
+        } else {
+            lockman.acquireAndRelease(transaction, name, LockType.S, descendants);
+        }
         return;
     }
 
@@ -262,7 +316,7 @@ public class LockContext {
      * lock is held at this level.
      */
     public LockType getExplicitLockType(TransactionContext transaction) {
-        if (transaction == null) return LockType.NL;
+        if (transaction == null) return NL;
         // TODO(proj4_part2): implement
         return lockman.getLockType(transaction, getResourceName());
     }
@@ -274,10 +328,10 @@ public class LockContext {
      * lock.
      */
     public LockType getEffectiveLockType(TransactionContext transaction) {
-        if (transaction == null) return LockType.NL;
+        if (transaction == null) return NL;
         // TODO(proj4_part2): implement
         LockType lockType = getExplicitLockType(transaction);
-        if (lockType != LockType.NL) return lockType;
+        if (lockType != NL) return lockType;
 
         LockContext ancestorCTX = parentContext();
         if (ancestorCTX != null) {
