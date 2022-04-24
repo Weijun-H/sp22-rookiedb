@@ -332,14 +332,15 @@ public class LockContext {
         // TODO(proj4_part2): implement
         LockType lockType = getExplicitLockType(transaction);
         if (lockType != NL) return lockType;
-
         LockContext ancestorCTX = parentContext();
         if (ancestorCTX != null) {
             LockType parentEffectiveLockType = ancestorCTX.getEffectiveLockType(transaction);
-            if (parentEffectiveLockType != LockType.SIX)
+            if (parentEffectiveLockType == LockType.SIX) {
                 lockType = LockType.S;
-            else if (!parentEffectiveLockType.isIntent())
+            }
+            else if (!parentEffectiveLockType.isIntent()) {
                 lockType = parentEffectiveLockType;
+            }
         }
         return lockType;
     }
